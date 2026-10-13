@@ -3,12 +3,12 @@ package com.vintageflow.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vintageflow.app.data.repository.AuthRepositoryFirebase
+import com.vintageflow.app.ui.navigation.AppNavHost
 import com.vintageflow.app.ui.theme.VintageFlowTheme
+import com.vintageflow.app.ui.viewmodel.AuthViewModel
+import com.vintageflow.app.ui.viewmodel.AuthViewModelFactory
 
 class MainActivity : ComponentActivity() {
 
@@ -17,13 +17,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             VintageFlowTheme {
-
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Vintage Flow")
-                }
+                val authViewModel: AuthViewModel = viewModel(
+                    factory = AuthViewModelFactory(AuthRepositoryFirebase())
+                )
+                AppNavHost(authViewModel = authViewModel)
             }
         }
     }
