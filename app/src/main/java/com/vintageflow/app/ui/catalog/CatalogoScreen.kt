@@ -17,6 +17,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -33,11 +34,17 @@ fun CatalogoScreen(
     onPrendaClick: (String) -> Unit,
     onAgregarClick: () -> Unit,
     modifier: Modifier = Modifier,
-    esAdministrador: Boolean = true
+    esAdministrador: Boolean = true,
+    onCerrarSesion: () -> Unit = {}
 ) {
     Scaffold(
         modifier = modifier,
-        topBar = { TopAppBar(title = { Text("Catálogo Vintage Flow") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Catálogo Vintage Flow") },
+                actions = { TextButton(onClick = onCerrarSesion) { Text("Salir") } }
+            )
+        },
         floatingActionButton = {
             if (esAdministrador) {
                 FloatingActionButton(onClick = onAgregarClick) {

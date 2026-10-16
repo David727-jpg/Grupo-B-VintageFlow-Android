@@ -7,7 +7,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
+import androidx.navigation.navArgument
+import com.vintageflow.app.ui.catalog.DetalleScreen
+import com.vintageflow.app.ui.catalog.FormularioScreen
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.vintageflow.app.data.repository.PrendaRepositoryLocal
@@ -25,6 +29,14 @@ fun AppNavHost(
 ) {
     val navController = rememberNavController()
     val estado by authViewModel.estado.collectAsStateWithLifecycle()
+
+    // Un único ViewModel compartido por catálogo, detalle y formulario.
+    val prendaViewModel: PrendaViewModel = viewModel(
+        factory = remember { PrendaViewModelFactory(PrendaRepositoryLocal()) }
+    )
+    val prendas by prendaViewModel.prendas.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { prendaViewModel.cargarPrendas() }
+    val esAdministrador = estado.perfil?.puedeGestionarInventario() ?: false
 
     // Al autenticarse (login o registro) se pasa al catálogo y se limpia el
     // historial de auth para que "atrás" no regrese al formulario.
@@ -58,17 +70,64 @@ fun AppNavHost(
         }
 
         composable(Rutas.CATALOGO) {
-            val prendaViewModel: PrendaViewModel = viewModel(
-                factory = remember { PrendaViewModelFactory(PrendaRepositoryLocal()) }
-            )
-            val prendas by prendaViewModel.prendas.collectAsStateWithLifecycle()
-            LaunchedEffect(Unit) { prendaViewModel.cargarPrendas() }
-
             CatalogoScreen(
                 prendas = prendas,
-                onPrendaClick = {},
-                onAgregarClick = {},
-                esAdministrador = estado.perfil?.puedeGestionarInventario() ?: false
+                onPrendaClick = { id -> navController.navigate(Rutas.detalle(id)) },
+                onAgregarClick = { navController.navigate(Rutas.formulario()) },
+                esAdministrador = esAdministrador,
+                onCerrarSesion = {
+                    authViewModel.cerrarSesion()
+                    navController.navigate(Rutas.LOGIN) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Rutas.DETALLE,
+            arguments = listOf(navArgument(Rutas.ARG_ID) { type = NavType.StringType })
+        ) { entrada ->
+            val id = entrada.arguments?.getString(Rutas.ARG_ID)
+            DetalleScreen(
+                prenda = prendas.find { it.id == id },
+                onVolver = { navController.popBackStack() },
+                onEditar = { navController.navigate(Rutas.formulario(it)) },
+                onEliminar = {
+                    prendaViewModel.eliminarPrenda(it)
+                    navController.popBackStack()
+                },
+                esAdministrador = esAdministrador
+            )
+        }
+
+        composable(
+            route = Rutas.FORMULARIO,
+            arguments = listOf(
+                navArgument(Rutas.ARG_ID) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { entrada ->
+            val id = entrada.arguments?.getString(Rutas.ARG_ID)
+            val prenda = prendas.find { it.id == id }
+
+            // Un cliente, o una prenda inexistente, no debe ver el formulario.
+            if (!esAdministrador || (id != null && prenda == null)) {
+                LaunchedEffect(Unit) { navController.popBackStack() }
+                return@composable
+            }
+
+            FormularioScreen(
+                prendaInicial = prenda,
+                onGuardar = { nueva ->
+                    if (id == null) prendaViewModel.agregarPrenda(nueva)
+                    else prendaViewModel.actualizarPrenda(nueva)
+                    navController.popBackStack()
+                },
+                onCancelar = { navController.popBackStack() }
             )
         }
     }
