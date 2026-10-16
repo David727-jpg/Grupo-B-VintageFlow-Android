@@ -31,12 +31,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vintageflow.app.ui.viewmodel.AuthUiState
 
-/**
- * Pantalla de registro.
- *
- * Las cuentas creadas desde la app recibiran el rol CLIENTE. El rol ADMINISTRADOR se asigna solo por Firestore, para que nadie
- * pueda darse permisos de inventario desde la app.
- */
 @Composable
 fun RegistroScreen(
     estado: AuthUiState,
@@ -47,6 +41,48 @@ fun RegistroScreen(
     var nombre by rememberSaveable { mutableStateOf("") }
     var correo by rememberSaveable { mutableStateOf("") }
     var contrasena by rememberSaveable { mutableStateOf("") }
+
+    // CODIGO INTEGRANTE J: Estados para gestionar las validaciones de los tres campos de registro.
+    var errorNombreLocal by rememberSaveable { mutableStateOf<String?>(null) }
+    var errorCorreoLocal by rememberSaveable { mutableStateOf<String?>(null) }
+    var errorContrasenaLocal by rememberSaveable { mutableStateOf<String?>(null) }
+    // ______
+
+    // CODIGO INTEGRANTE J: Lógica de validación que bloquea el registro si no se cumplen
+    // las longitudes mínimas requeridas por Firebase Auth (contraseñas de 6 caracteres).
+    fun validarYRegistrar() {
+        var esValido = true
+        val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[a-zA-z]{2,}\$".toRegex()
+
+        if (nombre.trim().length < 3) {
+            errorNombreLocal = "El nombre debe tener al menos 3 letras"
+            esValido = false
+        } else {
+            errorNombreLocal = null
+        }
+
+        if (correo.isBlank()) {
+            errorCorreoLocal = "El correo es obligatorio"
+            esValido = false
+        } else if (!correo.matches(emailRegex)) {
+            errorCorreoLocal = "Ingresa un formato de correo válido"
+            esValido = false
+        } else {
+            errorCorreoLocal = null
+        }
+
+        if (contrasena.length < 6) {
+            errorContrasenaLocal = "Debe tener un mínimo de 6 caracteres"
+            esValido = false
+        } else {
+            errorContrasenaLocal = null
+        }
+
+        if (esValido) {
+            onRegistrar(nombre.trim(), correo.trim(), contrasena)
+        }
+    }
+    // ______
 
     Column(
         modifier = modifier
@@ -66,9 +102,16 @@ fun RegistroScreen(
 
         CampoValidado(
             valor = nombre,
-            onValorChange = { nombre = it },
+            onValorChange = { 
+                nombre = it
+                // CODIGO INTEGRANTE J: Limpia el error al modificar el nombre.
+                errorNombreLocal = null 
+                // ______
+            },
             etiqueta = "Nombre completo",
-            error = estado.errorNombre,
+            // CODIGO INTEGRANTE J: Prioriza el mensaje de error local.
+            error = errorNombreLocal ?: estado.errorNombre,
+            // ______
             habilitado = !estado.cargando
         )
 
@@ -76,9 +119,16 @@ fun RegistroScreen(
 
         CampoValidado(
             valor = correo,
-            onValorChange = { correo = it },
+            onValorChange = { 
+                correo = it
+                // CODIGO INTEGRANTE J: Limpia el error local del correo
+                errorCorreoLocal = null 
+                // ______
+            },
             etiqueta = "Correo electrónico",
-            error = estado.errorCorreo,
+            // CODIGO INTEGRANTE J: Prioriza error local
+            error = errorCorreoLocal ?: estado.errorCorreo,
+            // ______
             tipoTeclado = KeyboardType.Email,
             habilitado = !estado.cargando
         )
@@ -87,9 +137,16 @@ fun RegistroScreen(
 
         CampoValidado(
             valor = contrasena,
-            onValorChange = { contrasena = it },
+            onValorChange = { 
+                contrasena = it
+                // CODIGO INTEGRANTE J: Limpia error local de contraseña
+                errorContrasenaLocal = null 
+                // ______
+            },
             etiqueta = "Contraseña (mínimo 6 caracteres)",
-            error = estado.errorContrasena,
+            // CODIGO INTEGRANTE J: Prioriza error local
+            error = errorContrasenaLocal ?: estado.errorContrasena,
+            // ______
             esContrasena = true,
             imeAction = ImeAction.Done,
             habilitado = !estado.cargando
@@ -115,7 +172,9 @@ fun RegistroScreen(
         Spacer(Modifier.height(28.dp))
 
         Button(
-            onClick = { onRegistrar(nombre, correo, contrasena) },
+            // CODIGO INTEGRANTE J: Ejecuta la función de validación antes de continuar.
+            onClick = { validarYRegistrar() }, 
+            // ______
             enabled = !estado.cargando,
             modifier = Modifier
                 .fillMaxWidth()

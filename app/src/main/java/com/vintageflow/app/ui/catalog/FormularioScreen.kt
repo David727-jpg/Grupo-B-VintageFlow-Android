@@ -33,18 +33,33 @@ import com.vintageflow.app.data.model.Prenda
 
 private val ESTADOS = listOf("DISPONIBLE", "RESERVADO", "VENDIDO")
 
-fun validarTextoBasico(valor: String): String? =
-    if (valor.isBlank()) "Este campo es obligatorio" else null
-
-fun validarPrecioBasico(valor: String): String? {
-    val numero = valor.trim().replace(',', '.').toDoubleOrNull()
+// CODIGO INTEGRANTE J: Se rediseñó la función genérica de textos para el catálogo.
+// Ahora limpia espacios en blanco (.trim()) y exige un mínimo de 3 caracteres, 
+// previniendo que se guarden prendas sin nombre o talla definida.
+fun validarTextoBasico(valor: String): String? {
+    val textoLimpio = valor.trim()
     return when {
-        numero == null -> "Ingresa un número válido"
-        numero < 0 -> "El precio no puede ser negativo"
+        textoLimpio.isEmpty() -> "Este campo es obligatorio"
+        textoLimpio.length < 3 -> "Debe tener al menos 3 caracteres"
         else -> null
     }
 }
+// ______
 
+// CODIGO INTEGRANTE J: Se agregó el manejo de errores para evitar que el usuario
+// deje el campo de precio vacío o ingrese valores de $0.00, asegurando la integridad de datos.
+fun validarPrecioBasico(valor: String): String? {
+    val textoLimpio = valor.trim()
+    if (textoLimpio.isEmpty()) return "El precio es obligatorio"
+
+    val numero = textoLimpio.replace(',', '.').toDoubleOrNull()
+    return when {
+        numero == null -> "Ingresa un número válido (ej. 15.50)"
+        numero <= 0 -> "El precio debe ser mayor a $0.00"
+        else -> null
+    }
+}
+// ______
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,8 +129,6 @@ fun FormularioScreen(
                         intentoGuardar = true
                     } else {
                         val precioNumero = precio.trim().replace(',', '.').toDouble()
-                        // Al editar se usa copy() para conservar los campos que este
-                        // formulario no muestra (descripcion, imagenUrl).
                         val resultado = prendaInicial?.copy(
                             nombre = nombre.trim(),
                             talla = talla.trim(),

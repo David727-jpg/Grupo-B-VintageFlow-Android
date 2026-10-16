@@ -32,9 +32,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vintageflow.app.ui.viewmodel.AuthUiState
 
-/**
- * Pantalla de inicio de sesión.
- */
 @Composable
 fun LoginScreen(
     estado: AuthUiState,
@@ -44,6 +41,43 @@ fun LoginScreen(
 ) {
     var correo by rememberSaveable { mutableStateOf("") }
     var contrasena by rememberSaveable { mutableStateOf("") }
+    
+    // CODIGO INTEGRANTE J: Variables de estado locales para almacenar
+    // temporalmente los mensajes de error de validación visuales.
+    var errorCorreoLocal by rememberSaveable { mutableStateOf<String?>(null) }
+    var errorContrasenaLocal by rememberSaveable { mutableStateOf<String?>(null) }
+    // ______
+
+    // CODIGO INTEGRANTE J: Función que ejecuta las reglas de negocio. 
+    // Verifica que los campos no estén vacíos y comprueba que el texto 
+    // ingresado en el correo cumpla con el formato estándar usando una Regex.
+    fun validarYEnviar() {
+        var esValido = true
+        val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[a-zA-z]{2,}\$".toRegex()
+
+        if (correo.isBlank()) {
+            errorCorreoLocal = "El correo es obligatorio"
+            esValido = false
+        } else if (!correo.matches(emailRegex)) {
+            errorCorreoLocal = "Ingresa un formato de correo válido"
+            esValido = false
+        } else {
+            errorCorreoLocal = null
+        }
+
+        if (contrasena.isBlank()) {
+            errorContrasenaLocal = "La contraseña es obligatoria"
+            esValido = false
+        } else {
+            errorContrasenaLocal = null
+        }
+
+        // Si todo es correcto, recién aquí se llama la función del equipo
+        if (esValido) {
+            onIniciarSesion(correo, contrasena)
+        }
+    }
+    // ______
 
     Column(
         modifier = modifier
@@ -70,9 +104,16 @@ fun LoginScreen(
 
         CampoValidado(
             valor = correo,
-            onValorChange = { correo = it },
+            onValorChange = { 
+                correo = it
+                // CODIGO INTEGRANTE J: Limpiamos el error en tiempo real cuando el usuario vuelve a escribir.
+                errorCorreoLocal = null
+                // ______
+            },
             etiqueta = "Correo electrónico",
-            error = estado.errorCorreo,
+            // CODIGO INTEGRANTE J: Se prioriza mostrar el error de validación local antes que el del servidor.
+            error = errorCorreoLocal ?: estado.errorCorreo, 
+            // ______
             tipoTeclado = KeyboardType.Email,
             habilitado = !estado.cargando
         )
@@ -81,9 +122,16 @@ fun LoginScreen(
 
         CampoValidado(
             valor = contrasena,
-            onValorChange = { contrasena = it },
+            onValorChange = { 
+                contrasena = it
+                // CODIGO INTEGRANTE J: Limpiamos el error al escribir.
+                errorContrasenaLocal = null
+                // ______
+            },
             etiqueta = "Contraseña",
-            error = estado.errorContrasena,
+            // CODIGO INTEGRANTE J: Prioridad de error local sobre error de servidor.
+            error = errorContrasenaLocal ?: estado.errorContrasena,
+            // ______
             esContrasena = true,
             imeAction = ImeAction.Done,
             habilitado = !estado.cargando
@@ -109,7 +157,9 @@ fun LoginScreen(
         Spacer(Modifier.height(28.dp))
 
         Button(
-            onClick = { onIniciarSesion(correo, contrasena) },
+            // CODIGO INTEGRANTE J: Se reemplaza la ejecución directa por nuestra función interceptora.
+            onClick = { validarYEnviar() }, 
+            // ______
             enabled = !estado.cargando,
             modifier = Modifier
                 .fillMaxWidth()
