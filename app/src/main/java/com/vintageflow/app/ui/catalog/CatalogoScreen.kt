@@ -50,7 +50,8 @@ fun CatalogoScreen(
     onAgregarClick: () -> Unit,
     modifier: Modifier = Modifier,
     esAdministrador: Boolean = true,
-    onCerrarSesion: () -> Unit = {}
+    onCerrarSesion: () -> Unit = {},
+    onEstadisticasClick: () -> Unit = {}
 ) {
     var talla by remember { mutableStateOf<String?>(null) }
     var categoria by remember { mutableStateOf<String?>(null) }
@@ -70,7 +71,12 @@ fun CatalogoScreen(
                         letterSpacing = 2.sp
                     )
                 },
-                actions = { TextButton(onClick = onCerrarSesion) { Text("SALIR") } }
+                actions = {
+                    if (esAdministrador) {
+                        TextButton(onClick = onEstadisticasClick) { Text("STATS") }
+                    }
+                    TextButton(onClick = onCerrarSesion) { Text("SALIR") }
+                }
             )
         },
         floatingActionButton = {

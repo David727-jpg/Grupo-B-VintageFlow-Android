@@ -5,6 +5,8 @@ object Rutas {
     const val REGISTRO = "registro"
     const val CATALOGO = "catalogo"
 
+    const val ESTADISTICAS = "estadisticas"
+
     const val ARG_ID = "id"
     const val DETALLE = "detalle/{$ARG_ID}"
     const val FORMULARIO = "formulario?$ARG_ID={$ARG_ID}"
