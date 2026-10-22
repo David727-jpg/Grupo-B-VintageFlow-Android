@@ -51,7 +51,7 @@ fun CatalogoScreen(
     modifier: Modifier = Modifier,
     esAdministrador: Boolean = true,
     onCerrarSesion: () -> Unit = {},
-    onEstadisticasClick: () -> Unit = {}
+    bottomBar: @Composable () -> Unit = {}
 ) {
     var talla by remember { mutableStateOf<String?>(null) }
     var categoria by remember { mutableStateOf<String?>(null) }
@@ -72,13 +72,11 @@ fun CatalogoScreen(
                     )
                 },
                 actions = {
-                    if (esAdministrador) {
-                        TextButton(onClick = onEstadisticasClick) { Text("STATS") }
-                    }
                     TextButton(onClick = onCerrarSesion) { Text("SALIR") }
                 }
             )
         },
+        bottomBar = bottomBar,
         floatingActionButton = {
             if (esAdministrador) {
                 FloatingActionButton(onClick = onAgregarClick) {
