@@ -40,6 +40,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vintageflow.app.data.model.Prenda
+import com.vintageflow.app.ui.navigation.EncabezadoAdmin
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,18 +64,25 @@ fun CatalogoScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        "VINTAGE FLOW",
-                        style = MaterialTheme.typography.titleMedium,
-                        letterSpacing = 2.sp
-                    )
-                },
-                actions = {
-                    TextButton(onClick = onCerrarSesion) { Text("SALIR") }
-                }
-            )
+            if (esAdministrador) {
+                EncabezadoAdmin(
+                    titulo = "INVENTARIO",
+                    onCerrarSesion = { TextButton(onClick = onCerrarSesion) { Text("SALIR") } }
+                )
+            } else {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            "VINTAGE FLOW",
+                            style = MaterialTheme.typography.titleMedium,
+                            letterSpacing = 2.sp
+                        )
+                    },
+                    actions = {
+                        TextButton(onClick = onCerrarSesion) { Text("SALIR") }
+                    }
+                )
+            }
         },
         bottomBar = bottomBar,
         floatingActionButton = {

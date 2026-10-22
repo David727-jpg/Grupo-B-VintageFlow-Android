@@ -34,6 +34,7 @@ import com.vintageflow.app.data.model.Prenda
 import com.vintageflow.app.domain.AnalisisInventario
 import com.vintageflow.app.domain.Distribucion
 import com.vintageflow.app.domain.ResumenInventario
+import com.vintageflow.app.ui.navigation.EncabezadoAdmin
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,15 +50,9 @@ fun EstadisticasScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        "ESTADÍSTICAS",
-                        style = MaterialTheme.typography.titleMedium,
-                        letterSpacing = 2.sp
-                    )
-                },
-                actions = {
+            EncabezadoAdmin(
+                titulo = "ESTADÍSTICAS",
+                onCerrarSesion = {
                     TextButton(onClick = onCerrarSesion) { Text("SALIR") }
                 }
             )

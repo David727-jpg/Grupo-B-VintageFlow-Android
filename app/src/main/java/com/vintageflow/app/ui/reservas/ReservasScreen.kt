@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vintageflow.app.ui.navigation.EncabezadoAdmin
 
 data class Reserva(
     val id: String,
@@ -61,15 +62,9 @@ fun ReservasScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        "RESERVAS",
-                        style = MaterialTheme.typography.titleMedium,
-                        letterSpacing = 2.sp
-                    )
-                },
-                actions = { TextButton(onClick = onCerrarSesion) { Text("SALIR") } }
+            EncabezadoAdmin(
+                titulo = "RESERVAS",
+                onCerrarSesion = { TextButton(onClick = onCerrarSesion) { Text("SALIR") } }
             )
         },
         bottomBar = bottomBar
