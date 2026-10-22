@@ -22,6 +22,7 @@ import com.vintageflow.app.ui.viewmodel.AuthViewModel
 import com.vintageflow.app.ui.viewmodel.PrendaViewModel
 import com.vintageflow.app.ui.viewmodel.PrendaViewModelFactory
 import com.vintageflow.app.ui.stats.EstadisticasScreen
+import com.vintageflow.app.ui.reservas.ReservasScreen
 @Composable
 fun AppNavHost(
     authViewModel: AuthViewModel,
@@ -69,12 +70,19 @@ fun AppNavHost(
             launchSingleTop = true
         }
     }
+    val irAReservas = {
+        navController.navigate(Rutas.RESERVAS) {
+            popUpTo(Rutas.ESTADISTICAS)
+            launchSingleTop = true
+        }
+    }
     val barraInferior: @Composable (String) -> Unit = { ruta ->
         if (esAdministrador) {
             BarraInferior(
                 rutaActual = ruta,
                 onDashboard = irADashboard,
-                onInventario = irAInventario
+                onInventario = irAInventario,
+                onReservas = irAReservas
             )
         }
     }
@@ -120,6 +128,17 @@ fun AppNavHost(
                 prendas = prendas,
                 onCerrarSesion = cerrarSesion,
                 bottomBar = { barraInferior(Rutas.ESTADISTICAS) }
+            )
+        }
+
+        composable(Rutas.RESERVAS) {
+            if (!esAdministrador) {
+                LaunchedEffect(Unit) { navController.popBackStack() }
+                return@composable
+            }
+            ReservasScreen(
+                onCerrarSesion = cerrarSesion,
+                bottomBar = { barraInferior(Rutas.RESERVAS) }
             )
         }
 

@@ -6,6 +6,7 @@ object Rutas {
     const val CATALOGO = "catalogo"
 
     const val ESTADISTICAS = "estadisticas"
+    const val RESERVAS = "reservas"
 
     const val ARG_ID = "id"
     const val DETALLE = "detalle/{$ARG_ID}"
