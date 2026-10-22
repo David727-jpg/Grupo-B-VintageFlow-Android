@@ -21,7 +21,7 @@ import com.vintageflow.app.ui.catalog.CatalogoScreen
 import com.vintageflow.app.ui.viewmodel.AuthViewModel
 import com.vintageflow.app.ui.viewmodel.PrendaViewModel
 import com.vintageflow.app.ui.viewmodel.PrendaViewModelFactory
-
+import com.vintageflow.app.ui.stats.EstadisticasScreen
 @Composable
 fun AppNavHost(
     authViewModel: AuthViewModel,
@@ -75,12 +75,24 @@ fun AppNavHost(
                 onPrendaClick = { id -> navController.navigate(Rutas.detalle(id)) },
                 onAgregarClick = { navController.navigate(Rutas.formulario()) },
                 esAdministrador = esAdministrador,
+                onEstadisticasClick = { navController.navigate(Rutas.ESTADISTICAS) },
                 onCerrarSesion = {
                     authViewModel.cerrarSesion()
                     navController.navigate(Rutas.LOGIN) {
                         popUpTo(navController.graph.id) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        composable(Rutas.ESTADISTICAS) {
+            if (!esAdministrador) {
+                LaunchedEffect(Unit) { navController.popBackStack() }
+                return@composable
+            }
+            EstadisticasScreen(
+                prendas = prendas,
+                onVolver = { navController.popBackStack() }
             )
         }
 
