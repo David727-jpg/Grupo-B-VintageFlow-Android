@@ -14,7 +14,8 @@ import androidx.compose.runtime.Composable
 fun BarraInferior(
     rutaActual: String,
     onDashboard: () -> Unit,
-    onInventario: () -> Unit
+    onInventario: () -> Unit,
+    onReservas: () -> Unit
 ) {
     NavigationBar {
         NavigationBarItem(
@@ -28,6 +29,12 @@ fun BarraInferior(
             onClick = onInventario,
             icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
             label = { Text("INVENTARIO") }
+        )
+        NavigationBarItem(
+            selected = rutaActual == Rutas.RESERVAS,
+            onClick = onReservas,
+            icon = { Icon(IconoReservas, contentDescription = null) },
+            label = { Text("RESERVAS") }
         )
     }
 }
