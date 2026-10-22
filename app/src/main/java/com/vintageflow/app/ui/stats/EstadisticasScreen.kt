@@ -40,8 +40,9 @@ import com.vintageflow.app.domain.ResumenInventario
 @Composable
 fun EstadisticasScreen(
     prendas: List<Prenda>,
-    onVolver: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onCerrarSesion: () -> Unit = {},
+    bottomBar: @Composable () -> Unit = {}
 ) {
     val resumen = AnalisisInventario.resumir(prendas)
 
@@ -56,11 +57,12 @@ fun EstadisticasScreen(
                         letterSpacing = 2.sp
                     )
                 },
-                navigationIcon = {
-                    TextButton(onClick = onVolver) { Text("ATRÁS") }
+                actions = {
+                    TextButton(onClick = onCerrarSesion) { Text("SALIR") }
                 }
             )
-        }
+        },
+        bottomBar = bottomBar
     ) { padding ->
 
         if (resumen.estaVacio) {
@@ -373,7 +375,7 @@ private val PRENDAS_DEMO = listOf(
 @Composable
 private fun EstadisticasPreview() {
     MaterialTheme {
-        EstadisticasScreen(prendas = PRENDAS_DEMO, onVolver = {})
+        EstadisticasScreen(prendas = PRENDAS_DEMO)
     }
 }
 
@@ -381,6 +383,6 @@ private fun EstadisticasPreview() {
 @Composable
 private fun EstadisticasVaciasPreview() {
     MaterialTheme {
-        EstadisticasScreen(prendas = emptyList(), onVolver = {})
+        EstadisticasScreen(prendas = emptyList())
     }
 }

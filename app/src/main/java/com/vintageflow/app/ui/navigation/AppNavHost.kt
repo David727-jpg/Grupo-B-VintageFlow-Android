@@ -38,13 +38,44 @@ fun AppNavHost(
     LaunchedEffect(Unit) { prendaViewModel.cargarPrendas() }
     val esAdministrador = estado.perfil?.puedeGestionarInventario() ?: false
 
-    // Al autenticarse (login o registro) se pasa al catálogo y se limpia el
-    // historial de auth para que "atrás" no regrese al formulario.
+    // Al autenticarse (login o registro) se pasa a la pantalla inicial según el rol
+    // (administrador: dashboard, cliente: catálogo) y se limpia el historial de auth.
     LaunchedEffect(estado.autenticado) {
         if (estado.autenticado) {
-            navController.navigate(Rutas.CATALOGO) {
+            val inicio = if (esAdministrador) Rutas.ESTADISTICAS else Rutas.CATALOGO
+            navController.navigate(inicio) {
                 popUpTo(navController.graph.id) { inclusive = true }
             }
+        }
+    }
+
+    val cerrarSesion = {
+        authViewModel.cerrarSesion()
+        navController.navigate(Rutas.LOGIN) {
+            popUpTo(navController.graph.id) { inclusive = true }
+        }
+    }
+
+    // Las dos pestañas del administrador; el dashboard es la raíz del historial.
+    val irADashboard = {
+        navController.navigate(Rutas.ESTADISTICAS) {
+            popUpTo(Rutas.ESTADISTICAS)
+            launchSingleTop = true
+        }
+    }
+    val irAInventario = {
+        navController.navigate(Rutas.CATALOGO) {
+            popUpTo(Rutas.ESTADISTICAS)
+            launchSingleTop = true
+        }
+    }
+    val barraInferior: @Composable (String) -> Unit = { ruta ->
+        if (esAdministrador) {
+            BarraInferior(
+                rutaActual = ruta,
+                onDashboard = irADashboard,
+                onInventario = irAInventario
+            )
         }
     }
 
@@ -75,13 +106,8 @@ fun AppNavHost(
                 onPrendaClick = { id -> navController.navigate(Rutas.detalle(id)) },
                 onAgregarClick = { navController.navigate(Rutas.formulario()) },
                 esAdministrador = esAdministrador,
-                onEstadisticasClick = { navController.navigate(Rutas.ESTADISTICAS) },
-                onCerrarSesion = {
-                    authViewModel.cerrarSesion()
-                    navController.navigate(Rutas.LOGIN) {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                    }
-                }
+                onCerrarSesion = cerrarSesion,
+                bottomBar = { barraInferior(Rutas.CATALOGO) }
             )
         }
 
@@ -92,7 +118,8 @@ fun AppNavHost(
             }
             EstadisticasScreen(
                 prendas = prendas,
-                onVolver = { navController.popBackStack() }
+                onCerrarSesion = cerrarSesion,
+                bottomBar = { barraInferior(Rutas.ESTADISTICAS) }
             )
         }
 
