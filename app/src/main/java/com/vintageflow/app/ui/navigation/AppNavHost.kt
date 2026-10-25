@@ -14,7 +14,7 @@ import com.vintageflow.app.ui.catalog.DetalleScreen
 import com.vintageflow.app.ui.catalog.FormularioScreen
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.vintageflow.app.data.repository.PrendaRepositoryLocal
+import com.vintageflow.app.data.repository.PrendaRepositoryFirebase
 import com.vintageflow.app.ui.auth.LoginScreen
 import com.vintageflow.app.ui.auth.RegistroScreen
 import com.vintageflow.app.ui.catalog.CatalogoScreen
@@ -33,7 +33,9 @@ fun AppNavHost(
 
     // Un único ViewModel compartido por catálogo, detalle y formulario.
     val prendaViewModel: PrendaViewModel = viewModel(
-        factory = remember { PrendaViewModelFactory(PrendaRepositoryLocal()) }
+        factory = remember {
+            PrendaViewModelFactory(PrendaRepositoryFirebase())
+        }
     )
     val prendas by prendaViewModel.prendas.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { prendaViewModel.cargarPrendas() }
