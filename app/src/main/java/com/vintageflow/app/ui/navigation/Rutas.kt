@@ -8,6 +8,8 @@ object Rutas {
     const val ESTADISTICAS = "estadisticas"
     const val RESERVAS = "reservas"
 
+    const val RECUPERAR = "recuperar"
+
     const val ARG_ID = "id"
     const val DETALLE = "detalle/{$ARG_ID}"
     const val FORMULARIO = "formulario?$ARG_ID={$ARG_ID}"

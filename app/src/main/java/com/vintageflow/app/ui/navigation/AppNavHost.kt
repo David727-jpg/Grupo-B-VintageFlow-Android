@@ -23,6 +23,10 @@ import com.vintageflow.app.ui.viewmodel.PrendaViewModel
 import com.vintageflow.app.ui.viewmodel.PrendaViewModelFactory
 import com.vintageflow.app.ui.stats.EstadisticasScreen
 import com.vintageflow.app.ui.reservas.ReservasScreen
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import com.vintageflow.app.ui.auth.ClienteGoogle
+import com.vintageflow.app.ui.auth.RecuperarContrasenaScreen
 @Composable
 fun AppNavHost(
     authViewModel: AuthViewModel,
@@ -30,7 +34,7 @@ fun AppNavHost(
 ) {
     val navController = rememberNavController()
     val estado by authViewModel.estado.collectAsStateWithLifecycle()
-
+    LaunchedEffect(Unit) { authViewModel.restaurarSesion() }
     // Un único ViewModel compartido por catálogo, detalle y formulario.
     val prendaViewModel: PrendaViewModel = viewModel(
         factory = remember {
@@ -95,10 +99,19 @@ fun AppNavHost(
         modifier = modifier
     ) {
         composable(Rutas.LOGIN) {
+            val contexto = LocalContext.current
+
             LoginScreen(
                 estado = estado,
                 onIniciarSesion = authViewModel::iniciarSesion,
-                onIrARegistro = { navController.navigate(Rutas.REGISTRO) }
+                onIrARegistro = { navController.navigate(Rutas.REGISTRO) },
+                onIrARecuperar = {
+                    authViewModel.limpiarMensajes()
+                    navController.navigate(Rutas.RECUPERAR)
+                },
+                onIniciarConGoogle = {
+                    authViewModel.iniciarSesionConGoogle { ClienteGoogle(contexto).obtenerIdToken() }
+                }
             )
         }
 
@@ -110,6 +123,16 @@ fun AppNavHost(
             )
         }
 
+        composable(Rutas.RECUPERAR) {
+            RecuperarContrasenaScreen(
+                estado = estado,
+                onRecuperar = { correo -> authViewModel.recuperarContrasena(correo) },
+                onVolver = {
+                    authViewModel.limpiarMensajes()
+                    navController.popBackStack()
+                }
+            )
+        }
         composable(Rutas.CATALOGO) {
             CatalogoScreen(
                 prendas = prendas,
