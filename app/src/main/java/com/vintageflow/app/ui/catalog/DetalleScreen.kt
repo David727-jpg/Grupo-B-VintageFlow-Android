@@ -49,6 +49,7 @@ fun DetalleScreen(
     onReservar: ((String) -> Unit)? = null
 ) {
     var mostrarConfirmacion by remember { mutableStateOf(false) }
+    var mostrarReserva by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier,
@@ -93,7 +94,7 @@ fun DetalleScreen(
                     } else {
                         val disponible = prenda.estado.equals(ESTADO_DISPONIBLE, ignoreCase = true)
                         Button(
-                            onClick = { onReservar?.invoke(prenda.id) },
+                            onClick = { mostrarReserva = true },
                             enabled = disponible && onReservar != null,
                             shape = RectangleShape,
                             modifier = Modifier.fillMaxWidth()
@@ -165,6 +166,23 @@ fun DetalleScreen(
                         )
                     }
                 }
+            }
+
+            if (mostrarReserva) {
+                AlertDialog(
+                    onDismissRequest = { mostrarReserva = false },
+                    title = { Text("Reservar artículo") },
+                    text = { Text("¿Quieres reservar \"${prenda.nombre}\"? Quedará apartada a tu nombre.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            mostrarReserva = false
+                            onReservar?.invoke(prenda.id)
+                        }) { Text("Reservar") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { mostrarReserva = false }) { Text("Cancelar") }
+                    }
+                )
             }
 
             if (mostrarConfirmacion) {
