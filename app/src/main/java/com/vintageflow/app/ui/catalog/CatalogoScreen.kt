@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,7 +53,10 @@ fun CatalogoScreen(
     modifier: Modifier = Modifier,
     esAdministrador: Boolean = true,
     onCerrarSesion: () -> Unit = {},
-    bottomBar: @Composable () -> Unit = {}
+    bottomBar: @Composable () -> Unit = {},
+    cargando: Boolean = false,
+    error: String? = null,
+    onReintentar: () -> Unit = {}
 ) {
     var talla by remember { mutableStateOf<String?>(null) }
     var categoria by remember { mutableStateOf<String?>(null) }
@@ -121,6 +125,18 @@ fun CatalogoScreen(
             }
 
             when {
+                cargando && prendas.isEmpty() -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) { CircularProgressIndicator() }
+                error != null && prendas.isEmpty() -> Column(
+                    modifier = Modifier.fillMaxSize().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(error)
+                    TextButton(onClick = onReintentar) { Text("REINTENTAR") }
+                }
                 prendas.isEmpty() -> MensajeCentrado("El catálogo está vacío.")
                 visibles.isEmpty() -> Column(
                     modifier = Modifier.fillMaxSize(),
@@ -259,3 +275,4 @@ private fun CatalogoVacioPreview() {
         CatalogoScreen(prendas = emptyList(), onPrendaClick = {}, onAgregarClick = {})
     }
 }
+
