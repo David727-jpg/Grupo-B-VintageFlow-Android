@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.vintageflow.app.data.model.Prenda
 import com.vintageflow.app.data.model.Reserva
 import com.vintageflow.app.data.repository.ReservaRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 /** Estado y acciones de las reservas del cliente (Mis reservas y botón Reservar). */
@@ -27,14 +29,26 @@ class ReservaViewModel(
     private val _mensaje = MutableStateFlow<String?>(null)
     val mensaje: StateFlow<String?> = _mensaje.asStateFlow()
 
+    private var escuchaJob: Job? = null
+
+    /**
+     * Empieza a escuchar en tiempo real las reservas del cliente. Si se vuelve a
+     * llamar (por ejemplo al reintentar), reemplaza la escucha anterior.
+     */
     fun cargarMisReservas(clienteUid: String) {
-        viewModelScope.launch {
+        escuchaJob?.cancel()
+        escuchaJob = viewModelScope.launch {
             _cargando.value = true
             _error.value = null
-            repository.reservasDeCliente(clienteUid)
-                .onSuccess { _misReservas.value = it }
-                .onFailure { _error.value = it.message ?: "No se pudieron cargar tus reservas." }
-            _cargando.value = false
+            repository.observarReservasDeCliente(clienteUid)
+                .catch { e ->
+                    _error.value = e.message ?: "No se pudieron cargar tus reservas."
+                    _cargando.value = false
+                }
+                .collect { lista ->
+                    _misReservas.value = lista
+                    _cargando.value = false
+                }
         }
     }
 
@@ -49,7 +63,6 @@ class ReservaViewModel(
             repository.reservar(prenda, clienteUid, clienteNombre)
                 .onSuccess {
                     _mensaje.value = "Reserva creada: ${prenda.nombre}"
-                    cargarMisReservas(clienteUid)
                     onExito()
                 }
                 .onFailure { _mensaje.value = it.message ?: "No se pudo reservar la prenda." }
@@ -61,7 +74,6 @@ class ReservaViewModel(
             repository.cancelar(reserva.id)
                 .onSuccess {
                     _mensaje.value = "Reserva cancelada"
-                    cargarMisReservas(reserva.clienteUid)
                     onExito()
                 }
                 .onFailure { _mensaje.value = it.message ?: "No se pudo cancelar la reserva." }
