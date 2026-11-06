@@ -172,7 +172,8 @@ private fun ReservaFila(reserva: Reserva, onCancelar: () -> Unit) {
             )
             EtiquetaEstadoReserva(reserva.estado)
         }
-        if (reserva.estado != EstadosReserva.CANCELADA) {
+        // Las reglas de Firestore solo permiten al cliente cancelar reservas PENDIENTES.
+        if (reserva.estado == EstadosReserva.PENDIENTE) {
             OutlinedButton(onClick = onCancelar, shape = RectangleShape) { Text("CANCELAR") }
         }
     }
