@@ -1,6 +1,8 @@
 package com.vintageflow.app.data.repository
 
 import com.vintageflow.app.data.model.Prenda
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 class PrendaRepositoryLocal : PrendaRepository {
 
@@ -22,6 +24,8 @@ class PrendaRepositoryLocal : PrendaRepository {
             estado = "DISPONIBLE"
         )
     )
+
+    override fun observarPrendas(): Flow<List<Prenda>> = flowOf(prendas.toList())
 
     override suspend fun obtenerPrendas(): List<Prenda> {
         return prendas.toList()

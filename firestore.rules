@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function estaAutenticado() {
+      return request.auth != null;
+    }
+
+    function esAdministrador() {
+      return estaAutenticado() &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == "ADMINISTRADOR";
+    }
+
+    match /usuarios/{userId} {
+      allow read: if estaAutenticado() && (request.auth.uid == userId || esAdministrador());
+      allow create: if estaAutenticado() && request.auth.uid == userId;
+      allow update: if esAdministrador() || (
+        estaAutenticado() &&
+        request.auth.uid == userId &&
+        request.resource.data.rol == resource.data.rol
+      );
+      allow delete: if esAdministrador();
+    }
+
+    match /prendas/{prendaId} {
+      allow read: if estaAutenticado();
+      allow create, delete: if esAdministrador();
+      allow update: if esAdministrador() || (
+        estaAutenticado() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado']) &&
+        (
+          (resource.data.estado == 'DISPONIBLE' && request.resource.data.estado == 'RESERVADO') ||
+          (resource.data.estado == 'RESERVADO' && request.resource.data.estado == 'DISPONIBLE')
+        )
+      );
+    }
+
+    match /reservas/{reservaId} {
+      allow read: if estaAutenticado() && (
+        resource.data.clienteUid == request.auth.uid || esAdministrador()
+      );
+      allow create: if estaAutenticado() &&
+        request.resource.data.clienteUid == request.auth.uid &&
+        request.resource.data.estado == 'PENDIENTE';
+      allow update: if esAdministrador() || (
+        estaAutenticado() &&
+        resource.data.clienteUid == request.auth.uid &&
+        resource.data.estado == 'PENDIENTE' &&
+        request.resource.data.estado == 'CANCELADA'
+      );
+      allow delete: if esAdministrador();
+    }
+  }
+}
