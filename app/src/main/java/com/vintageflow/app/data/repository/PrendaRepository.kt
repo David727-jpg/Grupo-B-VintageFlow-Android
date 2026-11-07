@@ -1,8 +1,11 @@
 package com.vintageflow.app.data.repository
 
 import com.vintageflow.app.data.model.Prenda
+import kotlinx.coroutines.flow.Flow
 
 interface PrendaRepository {
+
+    fun observarPrendas(): Flow<List<Prenda>>
 
     suspend fun obtenerPrendas(): List<Prenda>
 
