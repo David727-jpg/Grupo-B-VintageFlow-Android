@@ -2,6 +2,7 @@ package com.vintageflow.app.ui.auth
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,7 +15,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,52 +35,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vintageflow.app.ui.viewmodel.AuthUiState
 
+/**
+ * Pantalla de inicio de sesión.
+ *
+ */
 @Composable
 fun LoginScreen(
     estado: AuthUiState,
     onIniciarSesion: (correo: String, contrasena: String) -> Unit,
     onIrARegistro: () -> Unit,
+    onIrARecuperar: () -> Unit = {},
+    onIniciarConGoogle: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var correo by rememberSaveable { mutableStateOf("") }
     var contrasena by rememberSaveable { mutableStateOf("") }
-    
-    // CODIGO INTEGRANTE J: Variables de estado locales para almacenar
-    // temporalmente los mensajes de error de validación visuales.
-    var errorCorreoLocal by rememberSaveable { mutableStateOf<String?>(null) }
-    var errorContrasenaLocal by rememberSaveable { mutableStateOf<String?>(null) }
-    // ______
-
-    // CODIGO INTEGRANTE J: Función que ejecuta las reglas de negocio. 
-    // Verifica que los campos no estén vacíos y comprueba que el texto 
-    // ingresado en el correo cumpla con el formato estándar usando una Regex.
-    fun validarYEnviar() {
-        var esValido = true
-        val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[a-zA-z]{2,}\$".toRegex()
-
-        if (correo.isBlank()) {
-            errorCorreoLocal = "El correo es obligatorio"
-            esValido = false
-        } else if (!correo.matches(emailRegex)) {
-            errorCorreoLocal = "Ingresa un formato de correo válido"
-            esValido = false
-        } else {
-            errorCorreoLocal = null
-        }
-
-        if (contrasena.isBlank()) {
-            errorContrasenaLocal = "La contraseña es obligatoria"
-            esValido = false
-        } else {
-            errorContrasenaLocal = null
-        }
-
-        // Si todo es correcto, recién aquí se llama la función del equipo
-        if (esValido) {
-            onIniciarSesion(correo, contrasena)
-        }
-    }
-    // ______
 
     Column(
         modifier = modifier
@@ -104,16 +76,9 @@ fun LoginScreen(
 
         CampoValidado(
             valor = correo,
-            onValorChange = { 
-                correo = it
-                // CODIGO INTEGRANTE J: Limpiamos el error en tiempo real cuando el usuario vuelve a escribir.
-                errorCorreoLocal = null
-                // ______
-            },
+            onValorChange = { correo = it },
             etiqueta = "Correo electrónico",
-            // CODIGO INTEGRANTE J: Se prioriza mostrar el error de validación local antes que el del servidor.
-            error = errorCorreoLocal ?: estado.errorCorreo, 
-            // ______
+            error = estado.errorCorreo,
             tipoTeclado = KeyboardType.Email,
             habilitado = !estado.cargando
         )
@@ -122,16 +87,9 @@ fun LoginScreen(
 
         CampoValidado(
             valor = contrasena,
-            onValorChange = { 
-                contrasena = it
-                // CODIGO INTEGRANTE J: Limpiamos el error al escribir.
-                errorContrasenaLocal = null
-                // ______
-            },
+            onValorChange = { contrasena = it },
             etiqueta = "Contraseña",
-            // CODIGO INTEGRANTE J: Prioridad de error local sobre error de servidor.
-            error = errorContrasenaLocal ?: estado.errorContrasena,
-            // ______
+            error = estado.errorContrasena,
             esContrasena = true,
             imeAction = ImeAction.Done,
             habilitado = !estado.cargando
@@ -157,9 +115,7 @@ fun LoginScreen(
         Spacer(Modifier.height(28.dp))
 
         Button(
-            // CODIGO INTEGRANTE J: Se reemplaza la ejecución directa por nuestra función interceptora.
-            onClick = { validarYEnviar() }, 
-            // ______
+            onClick = { onIniciarSesion(correo, contrasena) },
             enabled = !estado.cargando,
             modifier = Modifier
                 .fillMaxWidth()
@@ -176,7 +132,39 @@ fun LoginScreen(
             }
         }
 
+        Spacer(Modifier.height(20.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            HorizontalDivider(modifier = Modifier.weight(1f))
+            Text(
+                text = "o",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
+            HorizontalDivider(modifier = Modifier.weight(1f))
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        OutlinedButton(
+            onClick = onIniciarConGoogle,
+            enabled = !estado.cargando,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+        ) {
+            Text("Continuar con Google")
+        }
+
         Spacer(Modifier.height(8.dp))
+
+        TextButton(onClick = onIrARecuperar, enabled = !estado.cargando) {
+            Text("¿Olvidaste tu contraseña?")
+        }
 
         TextButton(onClick = onIrARegistro, enabled = !estado.cargando) {
             Text("¿No tienes cuenta? Regístrate")
