@@ -37,3 +37,25 @@ class GoogleCanceladoException(
 class GoogleSinCuentaException(
     mensaje: String = "No hay ninguna cuenta de Google en este dispositivo."
 ) : Exception(mensaje)
+/**
+ * Falla de resolución DNS, timeout o ausencia de conexión a internet.
+ * Atrapa los casos donde el dispositivo pierde señal antes o durante la petición.
+ */
+class ErrorDeRedException(
+    mensaje: String = "No hay conexión a internet. Verifica tu red."
+) : Exception(mensaje)
+
+/**
+ * Violación de las reglas de seguridad de Firestore.
+ * Fundamental para atrapar rechazos cuando José David configure los accesos por rol.
+ */
+class PermisoDenegadoException(
+    mensaje: String = "No tienes permisos suficientes para realizar esta acción."
+) : Exception(mensaje)
+
+/**
+ * Excepción de respaldo para caídas internas del servidor o códigos no tipificados.
+ */
+class ErrorDesconocidoException(
+    mensaje: String = "Ocurrió un error inesperado en el servidor."
+) : Exception(mensaje)
