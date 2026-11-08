@@ -23,7 +23,6 @@ import com.vintageflow.app.ui.viewmodel.PrendaViewModel
 import com.vintageflow.app.ui.viewmodel.PrendaViewModelFactory
 import com.vintageflow.app.ui.stats.EstadisticasScreen
 import com.vintageflow.app.ui.reservas.ReservasScreen
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import com.vintageflow.app.ui.auth.ClienteGoogle
 import com.vintageflow.app.ui.auth.RecuperarContrasenaScreen
@@ -42,7 +41,12 @@ fun AppNavHost(
         }
     )
     val prendas by prendaViewModel.prendas.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { prendaViewModel.cargarPrendas() }
+    val cargandoPrendas by prendaViewModel.cargando.collectAsStateWithLifecycle()
+    val errorPrendas by prendaViewModel.errorCarga.collectAsStateWithLifecycle()
+    LaunchedEffect(estado.perfil?.uid) {
+        if (estado.perfil != null) prendaViewModel.cargarPrendas()
+        else prendaViewModel.detenerCarga()
+    }
     val esAdministrador = estado.perfil?.puedeGestionarInventario() ?: false
 
     // Al autenticarse (login o registro) se pasa a la pantalla inicial según el rol
@@ -57,6 +61,7 @@ fun AppNavHost(
     }
 
     val cerrarSesion = {
+        prendaViewModel.detenerCarga()
         authViewModel.cerrarSesion()
         navController.navigate(Rutas.LOGIN) {
             popUpTo(navController.graph.id) { inclusive = true }
@@ -140,7 +145,10 @@ fun AppNavHost(
                 onAgregarClick = { navController.navigate(Rutas.formulario()) },
                 esAdministrador = esAdministrador,
                 onCerrarSesion = cerrarSesion,
-                bottomBar = { barraInferior(Rutas.CATALOGO) }
+                bottomBar = { barraInferior(Rutas.CATALOGO) },
+                cargando = cargandoPrendas,
+                error = errorPrendas,
+                onReintentar = prendaViewModel::cargarPrendas
             )
         }
 
@@ -152,7 +160,10 @@ fun AppNavHost(
             EstadisticasScreen(
                 prendas = prendas,
                 onCerrarSesion = cerrarSesion,
-                bottomBar = { barraInferior(Rutas.ESTADISTICAS) }
+                bottomBar = { barraInferior(Rutas.ESTADISTICAS) },
+                cargando = cargandoPrendas,
+                error = errorPrendas,
+                onReintentar = prendaViewModel::cargarPrendas
             )
         }
 

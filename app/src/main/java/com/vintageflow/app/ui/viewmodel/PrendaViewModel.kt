@@ -30,33 +30,40 @@ class PrendaViewModel(
     private val _mensaje = MutableStateFlow<String?>(null)
     val mensaje: StateFlow<String?> = _mensaje.asStateFlow()
 
+    private val _cargando = MutableStateFlow(false)
+    val cargando: StateFlow<Boolean> = _cargando.asStateFlow()
+
+    private val _errorCarga = MutableStateFlow<String?>(null)
+    val errorCarga: StateFlow<String?> = _errorCarga.asStateFlow()
+
     private var escuchaJob: Job? = null
 
-    init {
-        iniciarEscuchaEnTiempoReal()
-    }
-
-    private fun iniciarEscuchaEnTiempoReal() {
+    fun cargarPrendas() {
         escuchaJob?.cancel()
+        _cargando.value = true
+        _errorCarga.value = null
         escuchaJob = viewModelScope.launch {
             repository.observarPrendas()
-                .catch { e -> _mensaje.value = e.message }
+                .catch { e ->
+                    _errorCarga.value = "No se pudieron cargar las prendas: " +
+                        (e.message ?: "error desconocido")
+                    _cargando.value = false
+                }
                 .collect { lista ->
                     _prendas.value = lista
                     actualizarListasPorEstado(lista)
+                    _cargando.value = false
                 }
         }
     }
 
-    fun cargarPrendas() {
-        if (escuchaJob?.isActive != true) {
-            iniciarEscuchaEnTiempoReal()
-        }
-        viewModelScope.launch {
-            val lista = repository.obtenerPrendas()
-            _prendas.value = lista
-            actualizarListasPorEstado(lista)
-        }
+    fun detenerCarga() {
+        escuchaJob?.cancel()
+        escuchaJob = null
+        _prendas.value = emptyList()
+        actualizarListasPorEstado(emptyList())
+        _cargando.value = false
+        _errorCarga.value = null
     }
 
     private fun actualizarListasPorEstado(lista: List<Prenda>) {

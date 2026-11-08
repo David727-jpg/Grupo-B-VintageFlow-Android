@@ -125,11 +125,11 @@ fun CatalogoScreen(
             }
 
             when {
-                cargando && prendas.isEmpty() -> Box(
+                cargando -> Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) { CircularProgressIndicator() }
-                error != null && prendas.isEmpty() -> Column(
+                error != null -> Column(
                     modifier = Modifier.fillMaxSize().padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
@@ -275,4 +275,3 @@ private fun CatalogoVacioPreview() {
         CatalogoScreen(prendas = emptyList(), onPrendaClick = {}, onAgregarClick = {})
     }
 }
-
