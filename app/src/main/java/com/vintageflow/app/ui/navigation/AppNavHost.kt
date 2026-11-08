@@ -26,6 +26,12 @@ import com.vintageflow.app.ui.reservas.ReservasScreen
 import androidx.compose.ui.platform.LocalContext
 import com.vintageflow.app.ui.auth.ClienteGoogle
 import com.vintageflow.app.ui.auth.RecuperarContrasenaScreen
+import com.vintageflow.app.data.repository.ReservaRepositoryFirebase // [HILDA]
+import com.vintageflow.app.ui.misreservas.MisReservasScreen // [HILDA]
+import com.vintageflow.app.ui.viewmodel.ReservaViewModel // [HILDA]
+import com.vintageflow.app.ui.viewmodel.ReservaViewModelFactory // [HILDA]
+import com.vintageflow.app.ui.viewmodel.ReservasAdminViewModel // [ADMIN]
+import com.vintageflow.app.ui.viewmodel.ReservasAdminViewModelFactory // [ADMIN]
 @Composable
 fun AppNavHost(
     authViewModel: AuthViewModel,
@@ -41,16 +47,33 @@ fun AppNavHost(
         }
     )
     val prendas by prendaViewModel.prendas.collectAsStateWithLifecycle()
-    val prendasReservadas by prendaViewModel.prendasReservadas.collectAsStateWithLifecycle()
     val cargandoPrendas by prendaViewModel.cargando.collectAsStateWithLifecycle()
     val errorPrendas by prendaViewModel.errorCarga.collectAsStateWithLifecycle()
-    val resolviendoReserva by prendaViewModel.resolviendoReserva.collectAsStateWithLifecycle()
-    val errorReserva by prendaViewModel.errorReserva.collectAsStateWithLifecycle()
     LaunchedEffect(estado.perfil?.uid) {
         if (estado.perfil != null) prendaViewModel.cargarPrendas()
         else prendaViewModel.detenerCarga()
     }
     val esAdministrador = estado.perfil?.puedeGestionarInventario() ?: false
+
+    // [HILDA] Reservas del cliente, sobre el repositorio de Firestore.
+    val reservaViewModel: ReservaViewModel = viewModel(
+        factory = remember { ReservaViewModelFactory(ReservaRepositoryFirebase()) }
+    )
+    val misReservas by reservaViewModel.misReservas.collectAsStateWithLifecycle()
+    val cargandoReservas by reservaViewModel.cargando.collectAsStateWithLifecycle()
+    val errorReservas by reservaViewModel.error.collectAsStateWithLifecycle()
+    val mensajeReservas by reservaViewModel.mensaje.collectAsStateWithLifecycle()
+    val uidCliente = estado.perfil?.uid
+    val nombreCliente = estado.perfil?.nombre ?: ""
+
+    // [ADMIN] Panel de reservas del administrador (todas las reservas, en tiempo real).
+    val reservasAdminViewModel: ReservasAdminViewModel = viewModel(
+        factory = remember { ReservasAdminViewModelFactory(ReservaRepositoryFirebase()) }
+    )
+    val reservasAdmin by reservasAdminViewModel.reservas.collectAsStateWithLifecycle()
+    val cargandoReservasAdmin by reservasAdminViewModel.cargando.collectAsStateWithLifecycle()
+    val errorReservasAdmin by reservasAdminViewModel.error.collectAsStateWithLifecycle()
+    val mensajeReservasAdmin by reservasAdminViewModel.mensaje.collectAsStateWithLifecycle()
 
     // Al autenticarse (login o registro) se pasa a la pantalla inicial según el rol
     // (administrador: dashboard, cliente: catálogo) y se limpia el historial de auth.
@@ -65,6 +88,8 @@ fun AppNavHost(
 
     val cerrarSesion = {
         prendaViewModel.detenerCarga()
+        reservaViewModel.detenerEscucha() // [HILDA]
+        reservasAdminViewModel.detenerEscucha() // [ADMIN]
         authViewModel.cerrarSesion()
         navController.navigate(Rutas.LOGIN) {
             popUpTo(navController.graph.id) { inclusive = true }
@@ -90,6 +115,19 @@ fun AppNavHost(
             launchSingleTop = true
         }
     }
+    // [HILDA] Pestañas del cliente; el catálogo es la raíz de su historial.
+    val irAMisReservas = {
+        navController.navigate(Rutas.MIS_RESERVAS) {
+            popUpTo(Rutas.CATALOGO)
+            launchSingleTop = true
+        }
+    }
+    val irACatalogoCliente = {
+        navController.navigate(Rutas.CATALOGO) {
+            popUpTo(Rutas.CATALOGO)
+            launchSingleTop = true
+        }
+    }
     val barraInferior: @Composable (String) -> Unit = { ruta ->
         if (esAdministrador) {
             BarraInferior(
@@ -97,6 +135,12 @@ fun AppNavHost(
                 onDashboard = irADashboard,
                 onInventario = irAInventario,
                 onReservas = irAReservas
+            )
+        } else if (estado.autenticado) {
+            BarraInferiorCliente(
+                rutaActual = ruta,
+                onCatalogo = irACatalogoCliente,
+                onMisReservas = irAMisReservas
             )
         }
     }
@@ -175,18 +219,40 @@ fun AppNavHost(
                 LaunchedEffect(Unit) { navController.popBackStack() }
                 return@composable
             }
+            // [ADMIN] Escucha todas las reservas mientras el administrador está en sesión.
+            LaunchedEffect(uidCliente) { reservasAdminViewModel.escuchar() }
             ReservasScreen(
-                prendasReservadas = prendasReservadas,
-                onPrendaClick = { id -> navController.navigate(Rutas.detalle(id)) },
-                onAprobar = { id -> prendaViewModel.resolverReserva(id, true) },
-                onCancelar = { id -> prendaViewModel.resolverReserva(id, false) },
-                resolviendoReserva = resolviendoReserva,
-                errorReserva = errorReserva,
+                reservas = reservasAdmin,
+                onAprobar = reservasAdminViewModel::aprobar,
+                onCancelar = reservasAdminViewModel::cancelar,
+                cargando = cargandoReservasAdmin,
+                error = errorReservasAdmin,
+                onReintentar = reservasAdminViewModel::escuchar,
+                aviso = mensajeReservasAdmin,
+                onAvisoMostrado = reservasAdminViewModel::limpiarMensaje,
                 onCerrarSesion = cerrarSesion,
-                bottomBar = { barraInferior(Rutas.RESERVAS) },
-                cargando = cargandoPrendas,
-                error = errorPrendas,
-                onReintentar = prendaViewModel::cargarPrendas
+                bottomBar = { barraInferior(Rutas.RESERVAS) }
+            )
+        }
+
+        // [HILDA] Historial de reservas del cliente (en tiempo real).
+        composable(Rutas.MIS_RESERVAS) {
+            if (esAdministrador || uidCliente == null) {
+                LaunchedEffect(Unit) { navController.popBackStack() }
+                return@composable
+            }
+            LaunchedEffect(uidCliente) { reservaViewModel.cargarMisReservas(uidCliente) }
+            MisReservasScreen(
+                reservas = misReservas,
+                // La transacción de Firestore ya devuelve la prenda a DISPONIBLE.
+                onCancelar = { reserva -> reservaViewModel.cancelar(reserva) },
+                cargando = cargandoReservas,
+                error = errorReservas,
+                onReintentar = { reservaViewModel.cargarMisReservas(uidCliente) },
+                aviso = mensajeReservas,
+                onAvisoMostrado = reservaViewModel::limpiarMensaje,
+                onCerrarSesion = cerrarSesion,
+                bottomBar = { barraInferior(Rutas.MIS_RESERVAS) }
             )
         }
 
@@ -203,7 +269,21 @@ fun AppNavHost(
                     prendaViewModel.eliminarPrenda(it)
                     navController.popBackStack()
                 },
-                esAdministrador = esAdministrador
+                esAdministrador = esAdministrador,
+                // [HILDA] Solo el cliente autenticado puede reservar. La transacción marca
+                // la prenda RESERVADA y el catálogo se actualiza solo por el listener.
+                onReservar = if (!esAdministrador && uidCliente != null) {
+                    { idPrenda ->
+                        prendas.find { it.id == idPrenda }?.let { prenda ->
+                            reservaViewModel.reservar(prenda, uidCliente, nombreCliente) {
+                                navController.navigate(Rutas.MIS_RESERVAS) {
+                                    popUpTo(Rutas.CATALOGO)
+                                    launchSingleTop = true
+                                }
+                            }
+                        }
+                    }
+                } else null
             )
         }
 
