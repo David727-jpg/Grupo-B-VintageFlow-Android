@@ -63,5 +63,15 @@ class PrendaRepositoryLocal : PrendaRepository {
         } else {
             Result.failure(Exception("Prenda no encontrada"))
         }
+
+    }
+
+    override suspend fun resolverReserva(id: String, aprobar: Boolean): Result<Unit> {
+        val index = prendas.indexOfFirst { it.id == id }
+        if (index == -1 || !prendas[index].estado.equals("RESERVADO", ignoreCase = true)) {
+            return Result.failure(IllegalStateException("La prenda ya no está reservada."))
+        }
+        prendas[index] = prendas[index].copy(estado = if (aprobar) "VENDIDO" else "DISPONIBLE")
+        return Result.success(Unit)
     }
 }

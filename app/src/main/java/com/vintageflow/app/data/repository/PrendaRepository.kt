@@ -16,4 +16,6 @@ interface PrendaRepository {
     suspend fun actualizarPrenda(prenda: Prenda): Result<Unit>
 
     suspend fun eliminarPrenda(id: String): Result<Unit>
+
+    suspend fun resolverReserva(id: String, aprobar: Boolean): Result<Unit>
 }

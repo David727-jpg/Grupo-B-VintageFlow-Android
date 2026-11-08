@@ -1,6 +1,7 @@
 package com.vintageflow.app.ui.reservas
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,9 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -21,44 +21,30 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.vintageflow.app.data.model.Prenda
 import com.vintageflow.app.ui.navigation.EncabezadoAdmin
 
-data class Reserva(
-    val id: String,
-    val cliente: String,
-    val prenda: String,
-    val hora: String
-)
-
-// Datos de muestra mientras no exista una fuente real de reservas.
-val reservasDePrueba = listOf(
-    Reserva("R-001", "Carlos Martínez", "Camiseta básica", "10:30 AM"),
-    Reserva("R-002", "Andrea López", "Chaqueta Vintage", "12:00 PM"),
-    Reserva("R-003", "Daniel Hernández", "Jeans rectos", "2:30 PM"),
-    Reserva("R-004", "Sofía García", "Camisa casual", "4:00 PM")
-)
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReservasScreen(
+    prendasReservadas: List<Prenda>,
+    onPrendaClick: (String) -> Unit,
+    onAprobar: (String) -> Unit,
+    onCancelar: (String) -> Unit,
     modifier: Modifier = Modifier,
-    reservasIniciales: List<Reserva> = reservasDePrueba,
     onCerrarSesion: () -> Unit = {},
-    bottomBar: @Composable () -> Unit = {}
+    bottomBar: @Composable () -> Unit = {},
+    cargando: Boolean = false,
+    error: String? = null,
+    onReintentar: () -> Unit = {},
+    resolviendoReserva: String? = null,
+    errorReserva: String? = null
 ) {
-    var reservas by remember { mutableStateOf(reservasIniciales) }
-
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -69,31 +55,57 @@ fun ReservasScreen(
         },
         bottomBar = bottomBar
     ) { padding ->
-        if (reservas.isEmpty()) {
-            Box(
+        when {
+            cargando -> Box(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
             ) {
+                CircularProgressIndicator()
+            }
+            error != null -> Column(
+                modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(error, textAlign = TextAlign.Center)
+                TextButton(onClick = onReintentar) { Text("REINTENTAR") }
+            }
+            prendasReservadas.isEmpty() -> Column(
+                modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                if (errorReserva != null) {
+                    Text(errorReserva, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+                }
                 Text(
-                    "No hay reservas activas.",
+                    "No hay prendas reservadas.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
             }
-        } else {
-            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            else -> Column(modifier = Modifier.fillMaxSize().padding(padding)) {
                 Text(
-                    "Reservas activas",
+                    "Prendas reservadas",
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                 )
+                if (errorReserva != null) {
+                    Text(
+                        errorReserva,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(reservas, key = { it.id }) { reserva ->
-                        FilaReserva(
-                            reserva = reserva,
-                            onAprobar = { reservas = reservas - reserva },
-                            onCancelar = { reservas = reservas - reserva }
+                    items(prendasReservadas, key = { it.id }) { prenda ->
+                        FilaPrendaReservada(
+                            prenda = prenda,
+                            onPrendaClick = onPrendaClick,
+                            onAprobar = onAprobar,
+                            onCancelar = onCancelar,
+                            accionesHabilitadas = resolviendoReserva == null
                         )
                         HorizontalDivider()
                     }
@@ -104,44 +116,44 @@ fun ReservasScreen(
 }
 
 @Composable
-private fun FilaReserva(
-    reserva: Reserva,
-    onAprobar: () -> Unit,
-    onCancelar: () -> Unit
+private fun FilaPrendaReservada(
+    prenda: Prenda,
+    onPrendaClick: (String) -> Unit,
+    onAprobar: (String) -> Unit,
+    onCancelar: (String) -> Unit,
+    accionesHabilitadas: Boolean
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { onPrendaClick(prenda.id) },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                modifier = Modifier.size(64.dp).background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    "Sin imagen",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("Sin imagen", style = MaterialTheme.typography.labelSmall)
             }
             Column(modifier = Modifier.padding(start = 16.dp)) {
+                Text(prenda.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
-                    reserva.cliente,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "${reserva.prenda} — ${reserva.hora}",
+                    "${prenda.categoria} · Talla ${prenda.talla}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Text("$%.2f".format(prenda.precio), style = MaterialTheme.typography.bodyMedium)
             }
         }
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            modifier = Modifier.padding(top = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Button(onClick = onAprobar) { Text("APROBAR") }
-            OutlinedButton(onClick = onCancelar) { Text("CANCELAR") }
+            Button(onClick = { onAprobar(prenda.id) }, enabled = accionesHabilitadas) {
+                Text("APROBAR")
+            }
+            OutlinedButton(onClick = { onCancelar(prenda.id) }, enabled = accionesHabilitadas) {
+                Text("CANCELAR")
+            }
         }
     }
 }
@@ -149,11 +161,22 @@ private fun FilaReserva(
 @Preview(showBackground = true)
 @Composable
 private fun ReservasPreview() {
-    MaterialTheme { ReservasScreen() }
+    MaterialTheme {
+        ReservasScreen(
+            prendasReservadas = listOf(
+                Prenda(id = "1", nombre = "Chaqueta", talla = "M", categoria = "Chaquetas", precio = 30.0, estado = "RESERVADO")
+            ),
+            onPrendaClick = {},
+            onAprobar = {},
+            onCancelar = {}
+        )
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun ReservasVaciasPreview() {
-    MaterialTheme { ReservasScreen(reservasIniciales = emptyList()) }
+    MaterialTheme {
+        ReservasScreen(prendasReservadas = emptyList(), onPrendaClick = {}, onAprobar = {}, onCancelar = {})
+    }
 }

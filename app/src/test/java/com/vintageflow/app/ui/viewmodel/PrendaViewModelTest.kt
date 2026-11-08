@@ -83,8 +83,50 @@ class PrendaViewModelTest {
         assertEquals(listOf(prenda), viewModel.prendas.value)
     }
 
+    @Test
+    fun prendasReservadasExcluyeOtrosEstadosYSeActualiza() = runTest(dispatcher) {
+        val actualizaciones = MutableSharedFlow<List<Prenda>>(replay = 1)
+        val viewModel = PrendaViewModel(RepositorioPrueba(actualizaciones))
+        val reservada = Prenda(id = "1", estado = "reservado")
+        val disponible = Prenda(id = "2", estado = "DISPONIBLE")
+        val vendida = Prenda(id = "3", estado = "VENDIDO")
+        viewModel.cargarPrendas()
+        actualizaciones.emit(listOf(reservada, disponible, vendida))
+        advanceUntilIdle()
+        assertEquals(listOf(reservada), viewModel.prendasReservadas.value)
+
+        actualizaciones.emit(listOf(reservada.copy(estado = "DISPONIBLE"), disponible, vendida))
+        advanceUntilIdle()
+        assertTrue(viewModel.prendasReservadas.value.isEmpty())
+    }
+
+    @Test
+    fun resolverReservaEnviaAccionYMuestraErrores() = runTest(dispatcher) {
+        val repository = RepositorioPrueba(flowOf(emptyList()))
+        val viewModel = PrendaViewModel(repository)
+        viewModel.resolverReserva("1", true)
+        assertEquals("1", viewModel.resolviendoReserva.value)
+        viewModel.resolverReserva("2", false)
+        advanceUntilIdle()
+        assertEquals(listOf("1" to true), repository.acciones)
+        assertNull(viewModel.resolviendoReserva.value)
+
+        repository.errorAccion = IllegalStateException("Sin permisos")
+        viewModel.resolverReserva("1", false)
+        advanceUntilIdle()
+        assertEquals(listOf("1" to true, "1" to false), repository.acciones)
+        assertEquals("No se pudo actualizar la reserva: Sin permisos", viewModel.errorReserva.value)
+
+        repository.errorAccion = null
+        viewModel.resolverReserva("1", false)
+        advanceUntilIdle()
+        assertNull(viewModel.errorReserva.value)
+    }
+
     private class RepositorioPrueba(var fuente: Flow<List<Prenda>>) : PrendaRepository {
         var escuchas = 0
+        val acciones = mutableListOf<Pair<String, Boolean>>()
+        var errorAccion: Exception? = null
 
         override fun observarPrendas(): Flow<List<Prenda>> = flow {
             escuchas++
@@ -97,5 +139,9 @@ class PrendaViewModelTest {
         override suspend fun agregarPrenda(prenda: Prenda): Result<Unit> = Result.success(Unit)
         override suspend fun actualizarPrenda(prenda: Prenda): Result<Unit> = Result.success(Unit)
         override suspend fun eliminarPrenda(id: String): Result<Unit> = Result.success(Unit)
+        override suspend fun resolverReserva(id: String, aprobar: Boolean): Result<Unit> {
+            acciones.add(id to aprobar)
+            return errorAccion?.let { Result.failure(it) } ?: Result.success(Unit)
+        }
     }
 }
