@@ -1,11 +1,14 @@
 package com.vintageflow.app.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
+import com.vintageflow.app.data.model.EstadosReserva
 import com.vintageflow.app.data.model.Prenda
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.CancellationException
 
 class PrendaRepositoryFirebase(
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -90,6 +93,48 @@ class PrendaRepositoryFirebase(
                 .delete()
                 .await()
             Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun resolverReserva(id: String, aprobar: Boolean): Result<Unit> {
+        return try {
+            val prendaRef = db.collection(COLECCION_PRENDAS).document(id)
+            val pendientes = db.collection("reservas")
+                .whereEqualTo("prendaId", id)
+                .get(Source.SERVER)
+                .await()
+                .documents
+                .filter { it.getString("estado") == EstadosReserva.PENDIENTE }
+            if (pendientes.size > 1) {
+                throw IllegalStateException("Hay varias reservas pendientes para esta prenda. Revisa los datos antes de continuar.")
+            }
+            val reservaRef = pendientes.singleOrNull()?.reference
+            db.runTransaction { transaccion ->
+                val prenda = transaccion.get(prendaRef)
+                val reserva = reservaRef?.let { transaccion.get(it) }
+                if (!prenda.exists() || !prenda.getString("estado").equals("RESERVADO", ignoreCase = true)) {
+                    throw IllegalStateException("La prenda ya no está reservada.")
+                }
+                if (reserva != null &&
+                    (reserva.getString("estado") != EstadosReserva.PENDIENTE ||
+                        reserva.getString("prendaId") != id)
+                ) {
+                    throw IllegalStateException("La reserva cambió. Actualiza la pantalla e inténtalo de nuevo.")
+                }
+                transaccion.update(prendaRef, "estado", if (aprobar) "VENDIDO" else "DISPONIBLE")
+                if (reservaRef != null) {
+                    transaccion.update(
+                        reservaRef,
+                        "estado",
+                        if (aprobar) EstadosReserva.APROBADA else EstadosReserva.CANCELADA
+                    )
+                }
+            }.await()
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }

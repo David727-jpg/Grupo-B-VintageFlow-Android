@@ -36,6 +36,12 @@ class PrendaViewModel(
     private val _errorCarga = MutableStateFlow<String?>(null)
     val errorCarga: StateFlow<String?> = _errorCarga.asStateFlow()
 
+    private val _resolviendoReserva = MutableStateFlow<String?>(null)
+    val resolviendoReserva: StateFlow<String?> = _resolviendoReserva.asStateFlow()
+
+    private val _errorReserva = MutableStateFlow<String?>(null)
+    val errorReserva: StateFlow<String?> = _errorReserva.asStateFlow()
+
     private var escuchaJob: Job? = null
 
     fun cargarPrendas() {
@@ -64,6 +70,24 @@ class PrendaViewModel(
         actualizarListasPorEstado(emptyList())
         _cargando.value = false
         _errorCarga.value = null
+        _errorReserva.value = null
+    }
+
+    fun resolverReserva(id: String, aprobar: Boolean) {
+        if (_resolviendoReserva.value != null) return
+        _resolviendoReserva.value = id
+        _errorReserva.value = null
+        viewModelScope.launch {
+            try {
+                repository.resolverReserva(id, aprobar)
+                    .onFailure { error ->
+                        _errorReserva.value = "No se pudo actualizar la reserva: " +
+                            (error.message ?: "error desconocido")
+                    }
+            } finally {
+                _resolviendoReserva.value = null
+            }
+        }
     }
 
     private fun actualizarListasPorEstado(lista: List<Prenda>) {

@@ -41,8 +41,11 @@ fun AppNavHost(
         }
     )
     val prendas by prendaViewModel.prendas.collectAsStateWithLifecycle()
+    val prendasReservadas by prendaViewModel.prendasReservadas.collectAsStateWithLifecycle()
     val cargandoPrendas by prendaViewModel.cargando.collectAsStateWithLifecycle()
     val errorPrendas by prendaViewModel.errorCarga.collectAsStateWithLifecycle()
+    val resolviendoReserva by prendaViewModel.resolviendoReserva.collectAsStateWithLifecycle()
+    val errorReserva by prendaViewModel.errorReserva.collectAsStateWithLifecycle()
     LaunchedEffect(estado.perfil?.uid) {
         if (estado.perfil != null) prendaViewModel.cargarPrendas()
         else prendaViewModel.detenerCarga()
@@ -173,8 +176,17 @@ fun AppNavHost(
                 return@composable
             }
             ReservasScreen(
+                prendasReservadas = prendasReservadas,
+                onPrendaClick = { id -> navController.navigate(Rutas.detalle(id)) },
+                onAprobar = { id -> prendaViewModel.resolverReserva(id, true) },
+                onCancelar = { id -> prendaViewModel.resolverReserva(id, false) },
+                resolviendoReserva = resolviendoReserva,
+                errorReserva = errorReserva,
                 onCerrarSesion = cerrarSesion,
-                bottomBar = { barraInferior(Rutas.RESERVAS) }
+                bottomBar = { barraInferior(Rutas.RESERVAS) },
+                cargando = cargandoPrendas,
+                error = errorPrendas,
+                onReintentar = prendaViewModel::cargarPrendas
             )
         }
 
