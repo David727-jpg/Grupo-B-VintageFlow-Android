@@ -36,27 +36,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vintageflow.app.data.model.Prenda
-
-
-fun validarTextoBasico(valor: String): String? =
-    if (valor.isBlank()) "Este campo es obligatorio" else null
-
-fun validarPrecioBasico(valor: String): String? {
-    val numero = valor.trim().replace(',', '.').toDoubleOrNull()
-    return when {
-        numero == null -> "Ingresa un número válido"
-        numero <= 0 -> "El precio debe ser mayor a 0"
-        else -> null
-    }
-}
+import com.vintageflow.app.domain.ValidadorAuth
 
 /**
  * Formulario para registrar (prendaInicial = null) o editar una prenda.
  *
- * - Talla y categoría se eligen de listas cerradas (manual, sección 10.5).
- * - Una prenda nueva siempre nace DISPONIBLE; al editar solo se ofrecen los
- *   cambios de estado permitidos por la regla RN-04.
- * - idsExistentes (opcional): ids ya registrados, para rechazar duplicados.
+ * Talla y categoría se eligen de listas cerradas (manual, sección 10.5).
+ * Una prenda nueva siempre nace DISPONIBLE; al editar solo se ofrecen los
+ * cambios de estado permitidos por la regla RN-04.
+ * idsExistentes (opcional): ids ya registrados, para rechazar duplicados.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,8 +54,9 @@ fun FormularioScreen(
     modifier: Modifier = Modifier,
     prendaInicial: Prenda? = null,
     idsExistentes: Set<String> = emptySet(),
-    validarTexto: (String) -> String? = ::validarTextoBasico,
-    validarPrecio: (String) -> String? = ::validarPrecioBasico
+    // Se conectan las validaciones a la clase centralizada de dominio
+    validarTexto: (String) -> String? = ValidadorAuth::validarTextoPrenda,
+    validarPrecio: (String) -> String? = ValidadorAuth::validarPrecioPrenda
 ) {
     val esNueva = prendaInicial == null
 
@@ -81,12 +70,8 @@ fun FormularioScreen(
     }
     var intentoGuardar by remember { mutableStateOf(false) }
 
-    val errId = if (esNueva) {
-        validarTexto(id)
-            ?: if (idsExistentes.any { it.equals(id.trim(), ignoreCase = true) }) {
-                "Ya existe una prenda con ese identificador"
-            } else null
-    } else null
+    // Se utiliza la validación de ID de la capa de dominio
+    val errId = if (esNueva) ValidadorAuth.validarIdPrenda(id, idsExistentes, true) else null
     val errNombre = validarTexto(nombre)
     val errTalla = if (talla.isBlank()) "Selecciona una talla" else null
     val errCategoria = if (categoria.isBlank()) "Selecciona una categoría" else null
@@ -150,7 +135,7 @@ fun FormularioScreen(
                 val estadoActual = (prendaInicial?.estado ?: ESTADO_DISPONIBLE).uppercase()
                 Text(
                     "Esta prenda está $estadoActual. El estado cambia solo al reservar, " +
-                        "aprobar o cancelar una reserva; las reservas se gestionan desde el panel de Reservas.",
+                            "aprobar o cancelar una reserva; las reservas se gestionan desde el panel de Reservas.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

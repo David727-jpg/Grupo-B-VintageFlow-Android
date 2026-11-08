@@ -1,13 +1,12 @@
 package com.vintageflow.app.domain
 
 /**
- * Reglas de validación de los datos de autenticación.
+ * Reglas de validación de los datos de autenticación y catálogo.
  *
  * Vive en `domain` y no en el ViewModel por la misma razón por la que en la
  * Etapa 2 las reglas viven en `Validador` y no en `MenuConsola`: la regla es
  * una sola y el lugar donde se aplica puede ser cualquiera. Tener la regla
  * escrita en cada pantalla es lo que produce las inconsistencias.
- *
  */
 object ValidadorAuth {
 
@@ -62,5 +61,31 @@ object ValidadorAuth {
         contrasena.length < LONGITUD_MINIMA_CONTRASENA ->
             "La contraseña debe tener al menos $LONGITUD_MINIMA_CONTRASENA caracteres."
         else -> null
+    }
+
+    // -----------------------------------------------------------------
+    // Validaciones del Catálogo (Prendas)
+    // -----------------------------------------------------------------
+
+    fun validarTextoPrenda(valor: String): String? =
+        if (valor.trim().isEmpty()) "Este campo es obligatorio" else null
+
+    fun validarPrecioPrenda(valor: String): String? {
+        val numero = valor.trim().replace(',', '.').toDoubleOrNull()
+        return when {
+            numero == null -> "Ingresa un número válido"
+            numero <= 0 -> "El precio debe ser mayor a 0"
+            else -> null
+        }
+    }
+
+    fun validarIdPrenda(id: String, idsExistentes: Set<String>, esNueva: Boolean): String? {
+        val idLimpio = id.trim()
+        if (idLimpio.isEmpty()) return "El ID es obligatorio"
+
+        if (esNueva && idsExistentes.any { it.equals(idLimpio, ignoreCase = true) }) {
+            return "Ya existe una prenda con ese identificador"
+        }
+        return null
     }
 }
