@@ -144,24 +144,16 @@ fun FormularioScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                val permitidos = estadosPermitidos(prendaInicial?.estado ?: ESTADO_DISPONIBLE)
-                if (permitidos.size == 1) {
-                    Text(
-                        "Esta prenda está ${permitidos.first()} y no admite cambios de estado.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    permitidos.forEach { opcion ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().clickable { estado = opcion },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(selected = estado == opcion, onClick = { estado = opcion })
-                            Text(opcion)
-                        }
-                    }
-                }
+                // El estado de una prenda ya no se edita a mano: cambia solo al reservar,
+                // aprobar o cancelar una reserva (transacciones del repositorio de reservas).
+                // Editarlo aquí dejaría la prenda y su reserva en estados contradictorios.
+                val estadoActual = (prendaInicial?.estado ?: ESTADO_DISPONIBLE).uppercase()
+                Text(
+                    "Esta prenda está $estadoActual. El estado cambia solo al reservar, " +
+                        "aprobar o cancelar una reserva; las reservas se gestionan desde el panel de Reservas.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             Row(
