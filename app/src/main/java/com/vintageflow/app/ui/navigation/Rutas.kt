@@ -7,6 +7,7 @@ object Rutas {
 
     const val ESTADISTICAS = "estadisticas"
     const val RESERVAS = "reservas"
+    const val MIS_RESERVAS = "mis_reservas"
 
     const val RECUPERAR = "recuperar"
 
