@@ -52,6 +52,15 @@ class ReservaViewModel(
         }
     }
 
+    /** Detiene la escucha y limpia el estado (al cerrar sesión). */
+    fun detenerEscucha() {
+        escuchaJob?.cancel()
+        escuchaJob = null
+        _misReservas.value = emptyList()
+        _error.value = null
+        _cargando.value = false
+    }
+
     /** onExito se ejecuta solo si la reserva se creó (por ejemplo, para navegar). */
     fun reservar(
         prenda: Prenda,
@@ -84,3 +93,4 @@ class ReservaViewModel(
         _mensaje.value = null
     }
 }
+
