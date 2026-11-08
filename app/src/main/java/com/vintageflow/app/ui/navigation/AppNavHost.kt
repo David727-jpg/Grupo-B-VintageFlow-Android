@@ -23,6 +23,9 @@ import com.vintageflow.app.ui.viewmodel.PrendaViewModel
 import com.vintageflow.app.ui.viewmodel.PrendaViewModelFactory
 import com.vintageflow.app.ui.stats.EstadisticasScreen
 import com.vintageflow.app.ui.reservas.ReservasScreen
+import androidx.compose.ui.platform.LocalContext
+import com.vintageflow.app.ui.auth.ClienteGoogle
+import com.vintageflow.app.ui.auth.RecuperarContrasenaScreen
 @Composable
 fun AppNavHost(
     authViewModel: AuthViewModel,
@@ -30,7 +33,7 @@ fun AppNavHost(
 ) {
     val navController = rememberNavController()
     val estado by authViewModel.estado.collectAsStateWithLifecycle()
-
+    LaunchedEffect(Unit) { authViewModel.restaurarSesion() }
     // Un único ViewModel compartido por catálogo, detalle y formulario.
     val prendaViewModel: PrendaViewModel = viewModel(
         factory = remember {
@@ -38,7 +41,12 @@ fun AppNavHost(
         }
     )
     val prendas by prendaViewModel.prendas.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { prendaViewModel.cargarPrendas() }
+    val cargandoPrendas by prendaViewModel.cargando.collectAsStateWithLifecycle()
+    val errorPrendas by prendaViewModel.errorCarga.collectAsStateWithLifecycle()
+    LaunchedEffect(estado.perfil?.uid) {
+        if (estado.perfil != null) prendaViewModel.cargarPrendas()
+        else prendaViewModel.detenerCarga()
+    }
     val esAdministrador = estado.perfil?.puedeGestionarInventario() ?: false
 
     // Al autenticarse (login o registro) se pasa a la pantalla inicial según el rol
@@ -53,6 +61,7 @@ fun AppNavHost(
     }
 
     val cerrarSesion = {
+        prendaViewModel.detenerCarga()
         authViewModel.cerrarSesion()
         navController.navigate(Rutas.LOGIN) {
             popUpTo(navController.graph.id) { inclusive = true }
@@ -95,10 +104,19 @@ fun AppNavHost(
         modifier = modifier
     ) {
         composable(Rutas.LOGIN) {
+            val contexto = LocalContext.current
+
             LoginScreen(
                 estado = estado,
                 onIniciarSesion = authViewModel::iniciarSesion,
-                onIrARegistro = { navController.navigate(Rutas.REGISTRO) }
+                onIrARegistro = { navController.navigate(Rutas.REGISTRO) },
+                onIrARecuperar = {
+                    authViewModel.limpiarMensajes()
+                    navController.navigate(Rutas.RECUPERAR)
+                },
+                onIniciarConGoogle = {
+                    authViewModel.iniciarSesionConGoogle { ClienteGoogle(contexto).obtenerIdToken() }
+                }
             )
         }
 
@@ -110,6 +128,16 @@ fun AppNavHost(
             )
         }
 
+        composable(Rutas.RECUPERAR) {
+            RecuperarContrasenaScreen(
+                estado = estado,
+                onRecuperar = { correo -> authViewModel.recuperarContrasena(correo) },
+                onVolver = {
+                    authViewModel.limpiarMensajes()
+                    navController.popBackStack()
+                }
+            )
+        }
         composable(Rutas.CATALOGO) {
             CatalogoScreen(
                 prendas = prendas,
@@ -117,7 +145,10 @@ fun AppNavHost(
                 onAgregarClick = { navController.navigate(Rutas.formulario()) },
                 esAdministrador = esAdministrador,
                 onCerrarSesion = cerrarSesion,
-                bottomBar = { barraInferior(Rutas.CATALOGO) }
+                bottomBar = { barraInferior(Rutas.CATALOGO) },
+                cargando = cargandoPrendas,
+                error = errorPrendas,
+                onReintentar = prendaViewModel::cargarPrendas
             )
         }
 
@@ -129,7 +160,10 @@ fun AppNavHost(
             EstadisticasScreen(
                 prendas = prendas,
                 onCerrarSesion = cerrarSesion,
-                bottomBar = { barraInferior(Rutas.ESTADISTICAS) }
+                bottomBar = { barraInferior(Rutas.ESTADISTICAS) },
+                cargando = cargandoPrendas,
+                error = errorPrendas,
+                onReintentar = prendaViewModel::cargarPrendas
             )
         }
 

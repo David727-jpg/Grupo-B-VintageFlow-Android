@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -43,7 +44,10 @@ fun EstadisticasScreen(
     prendas: List<Prenda>,
     modifier: Modifier = Modifier,
     onCerrarSesion: () -> Unit = {},
-    bottomBar: @Composable () -> Unit = {}
+    bottomBar: @Composable () -> Unit = {},
+    cargando: Boolean = false,
+    error: String? = null,
+    onReintentar: () -> Unit = {}
 ) {
     val resumen = AnalisisInventario.resumir(prendas)
 
@@ -59,6 +63,26 @@ fun EstadisticasScreen(
         },
         bottomBar = bottomBar
     ) { padding ->
+
+        if (cargando || error != null) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                if (cargando) {
+                    CircularProgressIndicator()
+                } else if (error != null) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(error, textAlign = TextAlign.Center)
+                        TextButton(onClick = onReintentar) { Text("REINTENTAR") }
+                    }
+                }
+            }
+            return@Scaffold
+        }
 
         if (resumen.estaVacio) {
             Box(
