@@ -62,13 +62,20 @@ class PrendaRepositoryFirebase(
     override suspend fun agregarPrenda(prenda: Prenda): Result<Unit> {
         return try {
             val docRef = if (prenda.id.isNotBlank()) {
-                db.collection(COLECCION_PRENDAS).document(prenda.id)
+                db.collection(COLECCION_PRENDAS).document(prenda.id.trim())
             } else {
                 db.collection(COLECCION_PRENDAS).document()
             }
             val prendaConId = prenda.copy(id = docRef.id)
-            docRef.set(prendaConId).await()
+            db.runTransaction { transaccion ->
+                if (transaccion.get(docRef).exists()) {
+                    throw IllegalStateException("Ya existe una prenda con el ID ${docRef.id}.")
+                }
+                transaccion.set(docRef, prendaConId)
+            }.await()
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }

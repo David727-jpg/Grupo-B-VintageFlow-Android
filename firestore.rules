@@ -13,7 +13,7 @@ service cloud.firestore {
 
     match /usuarios/{userId} {
       allow read: if estaAutenticado() && (request.auth.uid == userId || esAdministrador());
-      allow create: if estaAutenticado() && request.auth.uid == userId;
+      allow create: if estaAutenticado() && request.auth.uid == userId && request.resource.data.rol == "CLIENTE";
       allow update: if esAdministrador() || (
         estaAutenticado() &&
         request.auth.uid == userId &&
@@ -23,14 +23,30 @@ service cloud.firestore {
     }
 
     match /prendas/{prendaId} {
+    function reservaNuevaDelCliente() {
+            let id = request.resource.data.get('reservaActiva', '');
+            return id != '' &&
+              !exists(/databases/$(database)/documents/reservas/$(id)) &&
+              getAfter(/databases/$(database)/documents/reservas/$(id)).data.clienteUid == request.auth.uid &&
+              getAfter(/databases/$(database)/documents/reservas/$(id)).data.prendaId == prendaId &&
+              getAfter(/databases/$(database)/documents/reservas/$(id)).data.estado == 'PENDIENTE';
+          }
+
+          function reservaCanceladaDelCliente() {
+            let id = resource.data.get('reservaActiva', '');
+            return id != '' &&
+              request.resource.data.get('reservaActiva', '') == '' &&
+              getAfter(/databases/$(database)/documents/reservas/$(id)).data.clienteUid == request.auth.uid &&
+              getAfter(/databases/$(database)/documents/reservas/$(id)).data.estado == 'CANCELADA';
+          }
       allow read: if estaAutenticado();
       allow create, delete: if esAdministrador();
       allow update: if esAdministrador() || (
         estaAutenticado() &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado']) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'reservaActiva']) &&
         (
-          (resource.data.estado == 'DISPONIBLE' && request.resource.data.estado == 'RESERVADO') ||
-          (resource.data.estado == 'RESERVADO' && request.resource.data.estado == 'DISPONIBLE')
+          (resource.data.estado == 'DISPONIBLE' && request.resource.data.estado == 'RESERVADO' && reservaNuevaDelCliente()) ||
+          (resource.data.estado == 'RESERVADO' && request.resource.data.estado == 'DISPONIBLE' && reservaCanceladaDelCliente())
         )
       );
     }
@@ -41,12 +57,14 @@ service cloud.firestore {
       );
       allow create: if estaAutenticado() &&
         request.resource.data.clienteUid == request.auth.uid &&
-        request.resource.data.estado == 'PENDIENTE';
+        request.resource.data.estado == 'PENDIENTE' &&
+        getAfter(/databases/$(database)/documents/prendas/$(request.resource.data.prendaId)).data.get('reservaActiva', '') == reservaId;
       allow update: if esAdministrador() || (
         estaAutenticado() &&
         resource.data.clienteUid == request.auth.uid &&
         resource.data.estado == 'PENDIENTE' &&
-        request.resource.data.estado == 'CANCELADA'
+        request.resource.data.estado == 'CANCELADA' &&
+               request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
       );
       allow delete: if esAdministrador();
     }

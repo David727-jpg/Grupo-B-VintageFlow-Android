@@ -307,7 +307,7 @@ fun AppNavHost(
             }
 
             FormularioScreen(
-                prendaInicial = prenda,
+                idsExistentes = prendas.map { it.id }.toSet(),
                 onGuardar = { nueva ->
                     if (id == null) prendaViewModel.agregarPrenda(nueva)
                     else prendaViewModel.actualizarPrenda(nueva)

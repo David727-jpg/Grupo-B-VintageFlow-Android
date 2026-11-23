@@ -120,7 +120,7 @@ class ReservaRepositoryFirebase(
                 estado = EstadosReserva.PENDIENTE
             )
 
-            transaccion.update(prendaRef, "estado", ESTADO_RESERVADO)
+            transaccion.update(prendaRef, "estado", ESTADO_RESERVADO, "reservaActiva", nuevaReservaRef.id)
             transaccion.set(nuevaReservaRef, nuevaReserva)
             nuevaReserva
         }.await()
@@ -144,10 +144,13 @@ class ReservaRepositoryFirebase(
 
             val prendaRef = db.collection(COLECCION_PRENDAS).document(reserva.prendaId)
             val prendaSnap = transaccion.get(prendaRef)
+            if (!prendaSnap.getString("estado").equals(ESTADO_RESERVADO, ignoreCase = true)) {
+                throw IllegalStateException("La prenda ya no está reservada.")
+            }
 
             transaccion.update(reservaRef, "estado", EstadosReserva.APROBADA)
             if (prendaSnap.exists()) {
-                transaccion.update(prendaRef, "estado", ESTADO_VENDIDO)
+                transaccion.update(prendaRef, "estado", ESTADO_VENDIDO, "reservaActiva", "")
             }
         }.await()
 
@@ -173,7 +176,7 @@ class ReservaRepositoryFirebase(
 
             transaccion.update(reservaRef, "estado", EstadosReserva.CANCELADA)
             if (prendaSnap.exists()) {
-                transaccion.update(prendaRef, "estado", ESTADO_DISPONIBLE)
+                transaccion.update(prendaRef, "estado", ESTADO_DISPONIBLE, "reservaActiva", "")
             }
         }.await()
 
@@ -182,3 +185,4 @@ class ReservaRepositoryFirebase(
         Result.failure(e)
     }
 }
+
