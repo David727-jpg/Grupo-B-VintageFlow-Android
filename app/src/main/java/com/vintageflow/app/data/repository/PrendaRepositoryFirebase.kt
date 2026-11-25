@@ -130,7 +130,11 @@ class PrendaRepositoryFirebase(
                 ) {
                     throw IllegalStateException("La reserva cambió. Actualiza la pantalla e inténtalo de nuevo.")
                 }
-                transaccion.update(prendaRef, "estado", if (aprobar) "VENDIDO" else "DISPONIBLE")
+                transaccion.update(
+                    prendaRef,
+                    "estado", if (aprobar) "VENDIDO" else "DISPONIBLE",
+                    "reservaActiva", ""
+                )
                 if (reservaRef != null) {
                     transaccion.update(
                         reservaRef,
