@@ -71,7 +71,10 @@ class PrendaRepositoryLocal : PrendaRepository {
         if (index == -1 || !prendas[index].estado.equals("RESERVADO", ignoreCase = true)) {
             return Result.failure(IllegalStateException("La prenda ya no está reservada."))
         }
-        prendas[index] = prendas[index].copy(estado = if (aprobar) "VENDIDO" else "DISPONIBLE")
+        prendas[index] = prendas[index].copy(
+            estado = if (aprobar) "VENDIDO" else "DISPONIBLE",
+            reservaActiva = ""
+        )
         return Result.success(Unit)
     }
 }

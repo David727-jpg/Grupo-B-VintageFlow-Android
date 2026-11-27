@@ -8,5 +8,6 @@ data class Prenda(
     val precio: Double = 0.0,
     val estado: String = "DISPONIBLE",
     val descripcion: String = "",
-    val imagenUrl: String = ""
+    val imagenUrl: String = "",
+    val reservaActiva: String = ""
 )
